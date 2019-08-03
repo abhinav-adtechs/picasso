@@ -27,24 +27,40 @@ import static com.squareup.picasso.Utils.getService;
 abstract class RemoteViewsAction extends Action<RemoteViewsAction.RemoteViewsTarget> {
   final RemoteViews remoteViews;
   final int viewId;
+  Callback callback;
 
   private RemoteViewsTarget target;
 
   RemoteViewsAction(Picasso picasso, Request data, RemoteViews remoteViews, int viewId,
-      int errorResId, int memoryPolicy, int networkPolicy, Object tag, String key) {
+      int errorResId, int memoryPolicy, int networkPolicy, Object tag, String key,
+      Callback callback) {
     super(picasso, null, data, memoryPolicy, networkPolicy, errorResId, null, key, tag, false);
     this.remoteViews = remoteViews;
     this.viewId = viewId;
+    this.callback = callback;
   }
 
   @Override void complete(Bitmap result, Picasso.LoadedFrom from) {
     remoteViews.setImageViewBitmap(viewId, result);
     update();
+    if (callback != null) {
+      callback.onSuccess();
+    }
   }
 
-  @Override public void error() {
+  @Override void cancel() {
+    super.cancel();
+    if (callback != null) {
+      callback = null;
+    }
+  }
+
+  @Override public void error(Exception e) {
     if (errorResId != 0) {
       setImageResource(errorResId);
+    }
+    if (callback != null) {
+      callback.onError(e);
     }
   }
 
@@ -89,8 +105,9 @@ abstract class RemoteViewsAction extends Action<RemoteViewsAction.RemoteViewsTar
 
     AppWidgetAction(Picasso picasso, Request data, RemoteViews remoteViews, int viewId,
         int[] appWidgetIds, int memoryPolicy, int networkPolicy, String key, Object tag,
-        int errorResId) {
-      super(picasso, data, remoteViews, viewId, errorResId, memoryPolicy, networkPolicy, tag, key);
+        int errorResId, Callback callback) {
+      super(picasso, data, remoteViews, viewId, errorResId, memoryPolicy, networkPolicy, tag, key,
+          callback);
       this.appWidgetIds = appWidgetIds;
     }
 
@@ -102,19 +119,22 @@ abstract class RemoteViewsAction extends Action<RemoteViewsAction.RemoteViewsTar
 
   static class NotificationAction extends RemoteViewsAction {
     private final int notificationId;
+    private final String notificationTag;
     private final Notification notification;
 
     NotificationAction(Picasso picasso, Request data, RemoteViews remoteViews, int viewId,
-        int notificationId, Notification notification, int memoryPolicy, int networkPolicy,
-        String key, Object tag, int errorResId) {
-      super(picasso, data, remoteViews, viewId, errorResId, memoryPolicy, networkPolicy, tag, key);
+        int notificationId, Notification notification, String notificationTag, int memoryPolicy,
+        int networkPolicy, String key, Object tag, int errorResId, Callback callback) {
+      super(picasso, data, remoteViews, viewId, errorResId, memoryPolicy, networkPolicy, tag, key,
+          callback);
       this.notificationId = notificationId;
+      this.notificationTag = notificationTag;
       this.notification = notification;
     }
 
     @Override void update() {
       NotificationManager manager = getService(picasso.context, NOTIFICATION_SERVICE);
-      manager.notify(notificationId, notification);
+      manager.notify(notificationTag, notificationId, notification);
     }
   }
 }

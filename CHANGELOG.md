@@ -1,6 +1,35 @@
 Change Log
 ==========
 
+Version 2.71828 *(2018-03-07)*
+------------------------------
+
+This version is not fully backwards compatible with previous 2.x releases!
+It is intended to be a stable, pre-3.0 release that users of 3.0.0-SNAPSHOT can use in the mean time.
+
+Its changes are many, as evidenced by the nearly 3 years since 2.5.2. If you are interested
+in them you can browse the commits here: https://github.com/square/picasso/compare/picasso-parent-2.5.2...2.71828
+
+Otherwise, stay tuned for 3.0 whose change log will be in relation to 2.5.2 and thus encompass any
+changes present in this release.
+
+
+Version 2.5.2 *(2015-03-20)*
+----------------------------
+
+ * Fix: Correct problems with adapter-based recycling of drawables and interop with external libraries like RoundImageView.
+
+
+Version 2.5.1 *(2015-03-19)*
+----------------------------
+
+ * Specifying transformations in a request now accepts a list.
+ * Fix: Correctly handle `null` values from content providers.
+ * Fix: Ensure contact photo thumbnail Uris are loaded with the correct request handler.
+ * Fix: Eliminate potential (albeit temporary) memory leak on pre-5.0 Android due to message pooling.
+ * Fix: Prevent placeholder image aspect ratio from changing while crossfading in image.
+
+
 Version 2.5.0 *(2015-02-06)*
 --------------------------
 

@@ -19,18 +19,16 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.robolectric.RobolectricTestRunner;
-import org.robolectric.annotation.Config;
+import org.robolectric.RobolectricGradleTestRunner;
 
 import static android.graphics.Bitmap.Config.RGB_565;
+import static com.google.common.truth.Truth.assertThat;
 import static com.squareup.picasso.RequestHandler.calculateInSampleSize;
 import static com.squareup.picasso.RequestHandler.createBitmapOptions;
 import static com.squareup.picasso.RequestHandler.requiresInSampleSize;
 import static com.squareup.picasso.TestUtils.URI_1;
-import static org.fest.assertions.api.Assertions.assertThat;
 
-@RunWith(RobolectricTestRunner.class)
-@Config(manifest = Config.NONE)
+@RunWith(RobolectricGradleTestRunner.class)
 public class RequestHandlerTest {
 
   @Test public void bitmapConfig() throws Exception {
@@ -87,7 +85,7 @@ public class RequestHandlerTest {
     assertThat(options.inSampleSize).isEqualTo(2);
   }
 
-  @Test public void nullBitmapOptionsIfNoResizing() {
+  @Test public void nullBitmapOptionsIfNoResizingOrPurgeable() {
     // No resize must return no bitmap options
     final Request noResize = new Request.Builder(URI_1).build();
     final BitmapFactory.Options noResizeOptions = createBitmapOptions(noResize);
@@ -100,13 +98,26 @@ public class RequestHandlerTest {
     final BitmapFactory.Options resizeOptions = createBitmapOptions(requiresResize);
     assertThat(resizeOptions).isNotNull();
     assertThat(resizeOptions.inJustDecodeBounds).isTrue();
+    assertThat(resizeOptions.inPurgeable).isFalse();
+    assertThat(resizeOptions.inInputShareable).isFalse();
   }
 
-  @Test public void createWithConfigAndNotInJustDecodeBounds() {
-    // Given a config must return bitmap options and false inJustDecodeBounds
+  @Test public void inPurgeableIfInPurgeable() {
+    final Request request = new Request.Builder(URI_1).purgeable().build();
+    final BitmapFactory.Options options = createBitmapOptions(request);
+    assertThat(options).isNotNull();
+    assertThat(options.inPurgeable).isTrue();
+    assertThat(options.inInputShareable).isTrue();
+    assertThat(options.inJustDecodeBounds).isFalse();
+  }
+
+  @Test public void createWithConfigAndNotInJustDecodeBoundsOrInPurgeable() {
+    // Given a config, must return bitmap options and false inJustDecodeBounds/inPurgeable
     final Request config = new Request.Builder(URI_1).config(RGB_565).build();
     final BitmapFactory.Options configOptions = createBitmapOptions(config);
     assertThat(configOptions).isNotNull();
     assertThat(configOptions.inJustDecodeBounds).isFalse();
+    assertThat(configOptions.inPurgeable).isFalse();
+    assertThat(configOptions.inInputShareable).isFalse();
   }
 }

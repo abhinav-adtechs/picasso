@@ -16,16 +16,15 @@
 package com.squareup.picasso;
 
 import android.content.Context;
-import android.media.ExifInterface;
+import android.support.media.ExifInterface;
 import android.net.Uri;
 import java.io.IOException;
+import okio.Okio;
+import okio.Source;
 
 import static android.content.ContentResolver.SCHEME_FILE;
-import static android.media.ExifInterface.ORIENTATION_NORMAL;
-import static android.media.ExifInterface.ORIENTATION_ROTATE_180;
-import static android.media.ExifInterface.ORIENTATION_ROTATE_270;
-import static android.media.ExifInterface.ORIENTATION_ROTATE_90;
-import static android.media.ExifInterface.TAG_ORIENTATION;
+import static android.support.media.ExifInterface.ORIENTATION_NORMAL;
+import static android.support.media.ExifInterface.TAG_ORIENTATION;
 import static com.squareup.picasso.Picasso.LoadedFrom.DISK;
 
 class FileRequestHandler extends ContentStreamRequestHandler {
@@ -39,21 +38,12 @@ class FileRequestHandler extends ContentStreamRequestHandler {
   }
 
   @Override public Result load(Request request, int networkPolicy) throws IOException {
-    return new Result(null, getInputStream(request), DISK, getFileExifRotation(request.uri));
+    Source source = Okio.source(getInputStream(request));
+    return new Result(null, source, DISK, getFileExifRotation(request.uri));
   }
 
   static int getFileExifRotation(Uri uri) throws IOException {
     ExifInterface exifInterface = new ExifInterface(uri.getPath());
-    int orientation = exifInterface.getAttributeInt(TAG_ORIENTATION, ORIENTATION_NORMAL);
-    switch (orientation) {
-      case ORIENTATION_ROTATE_90:
-        return 90;
-      case ORIENTATION_ROTATE_180:
-        return 180;
-      case ORIENTATION_ROTATE_270:
-        return 270;
-      default:
-        return 0;
-    }
+    return exifInterface.getAttributeInt(TAG_ORIENTATION, ORIENTATION_NORMAL);
   }
 }

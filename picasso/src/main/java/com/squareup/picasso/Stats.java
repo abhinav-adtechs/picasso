@@ -52,6 +52,7 @@ class Stats {
     this.cache = cache;
     this.statsThread = new HandlerThread(STATS_THREAD_NAME, THREAD_PRIORITY_BACKGROUND);
     this.statsThread.start();
+    Utils.flushStackLocalLeaks(statsThread.getLooper());
     this.handler = new StatsHandler(statsThread.getLooper(), this);
   }
 
@@ -126,7 +127,7 @@ class Stats {
 
     private final Stats stats;
 
-    public StatsHandler(Looper looper, Stats stats) {
+    StatsHandler(Looper looper, Stats stats) {
       super(looper);
       this.stats = stats;
     }

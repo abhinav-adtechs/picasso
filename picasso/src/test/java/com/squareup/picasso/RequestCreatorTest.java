@@ -21,6 +21,8 @@ import android.graphics.drawable.Drawable;
 import android.widget.ImageView;
 import android.widget.RemoteViews;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,11 +30,11 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
-import org.robolectric.Robolectric;
-import org.robolectric.RobolectricTestRunner;
-import org.robolectric.annotation.Config;
+import org.robolectric.RobolectricGradleTestRunner;
+import org.robolectric.RuntimeEnvironment;
 
 import static android.graphics.Bitmap.Config.ARGB_8888;
+import static com.google.common.truth.Truth.assertThat;
 import static com.squareup.picasso.Picasso.LoadedFrom.MEMORY;
 import static com.squareup.picasso.Picasso.Priority.HIGH;
 import static com.squareup.picasso.Picasso.Priority.LOW;
@@ -52,8 +54,7 @@ import static com.squareup.picasso.TestUtils.mockImageViewTarget;
 import static com.squareup.picasso.TestUtils.mockNotification;
 import static com.squareup.picasso.TestUtils.mockRemoteViews;
 import static com.squareup.picasso.TestUtils.mockTarget;
-import static org.fest.assertions.api.Assertions.assertThat;
-import static org.fest.assertions.api.Assertions.fail;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
@@ -67,9 +68,9 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
+import static org.robolectric.Shadows.shadowOf;
 
-@RunWith(RobolectricTestRunner.class)
-@Config(manifest = Config.NONE)
+@RunWith(RobolectricGradleTestRunner.class)
 public class RequestCreatorTest {
 
   @Mock Picasso picasso;
@@ -147,6 +148,18 @@ public class RequestCreatorTest {
     assertThat(actionCaptor.getValue().getPriority()).isEqualTo(HIGH);
   }
 
+  @Test public void fetchWithCache() {
+    when(picasso.quickMemoryCacheCheck(URI_KEY_1)).thenReturn(bitmap);
+    new RequestCreator(picasso, URI_1, 0).memoryPolicy(MemoryPolicy.NO_CACHE).fetch();
+    verify(picasso, never()).enqueueAndSubmit(any(Action.class));
+  }
+
+  @Test public void fetchWithMemoryPolicyNoCache() {
+    new RequestCreator(picasso, URI_1, 0).memoryPolicy(MemoryPolicy.NO_CACHE).fetch();
+    verify(picasso, never()).quickMemoryCacheCheck(URI_KEY_1);
+    verify(picasso).submit(actionCaptor.capture());
+  }
+
   @Test
   public void intoTargetWithNullThrows() {
     try {
@@ -190,13 +203,6 @@ public class RequestCreatorTest {
     verify(target).onBitmapLoaded(bitmap, MEMORY);
     verify(picasso).cancelRequest(target);
     verify(picasso, never()).enqueueAndSubmit(any(Action.class));
-  }
-
-  @Test
-  public void intoTargetAndSkipMemoryCacheDoesNotCheckMemoryCache() {
-    Target target = mockTarget();
-    new RequestCreator(picasso, URI_1, 0).skipMemoryCache().into(target);
-    verify(picasso, never()).quickMemoryCacheCheck(URI_KEY_1);
   }
 
   @Test
@@ -261,7 +267,7 @@ public class RequestCreatorTest {
   @Test
   public void intoImageViewWithQuickMemoryCacheCheckDoesNotSubmit() {
     Picasso picasso =
-        spy(new Picasso(Robolectric.application, mock(Dispatcher.class), Cache.NONE, null,
+        spy(new Picasso(RuntimeEnvironment.application, mock(Dispatcher.class), Cache.NONE, null,
             IDENTITY, null, mock(Stats.class), ARGB_8888, false, false));
     doReturn(bitmap).when(picasso).quickMemoryCacheCheck(URI_KEY_1);
     ImageView target = mockImageViewTarget();
@@ -276,7 +282,7 @@ public class RequestCreatorTest {
   @Test
   public void intoImageViewSetsPlaceholderDrawable() {
     Picasso picasso =
-        spy(new Picasso(Robolectric.application, mock(Dispatcher.class), Cache.NONE, null,
+        spy(new Picasso(RuntimeEnvironment.application, mock(Dispatcher.class), Cache.NONE, null,
             IDENTITY, null, mock(Stats.class), ARGB_8888, false, false));
     ImageView target = mockImageViewTarget();
     Drawable placeHolderDrawable = mock(Drawable.class);
@@ -289,7 +295,7 @@ public class RequestCreatorTest {
   @Test
   public void intoImageViewNoPlaceholderDrawable() {
     Picasso picasso =
-        spy(new Picasso(Robolectric.application, mock(Dispatcher.class), Cache.NONE, null, IDENTITY,
+        spy(new Picasso(RuntimeEnvironment.application, mock(Dispatcher.class), Cache.NONE, null, IDENTITY,
             null, mock(Stats.class), ARGB_8888, false, false));
     ImageView target = mockImageViewTarget();
     new RequestCreator(picasso, URI_1, 0).noPlaceholder().into(target);
@@ -301,13 +307,13 @@ public class RequestCreatorTest {
   @Test
   public void intoImageViewSetsPlaceholderWithResourceId() {
     Picasso picasso =
-        spy(new Picasso(Robolectric.application, mock(Dispatcher.class), Cache.NONE, null,
-            IDENTITY, null, mock(Stats.class), ARGB_8888, false, false));
+        spy(new Picasso(RuntimeEnvironment.application, mock(Dispatcher.class), Cache.NONE, null, IDENTITY,
+            null, mock(Stats.class), ARGB_8888, false, false));
     ImageView target = mockImageViewTarget();
     new RequestCreator(picasso, URI_1, 0).placeholder(android.R.drawable.picture_frame).into(target);
     ArgumentCaptor<Drawable> drawableCaptor = ArgumentCaptor.forClass(Drawable.class);
     verify(target).setImageDrawable(drawableCaptor.capture());
-    assertThat(Robolectric.shadowOf(drawableCaptor.getValue()).getCreatedFromResId()) //
+    assertThat(shadowOf(drawableCaptor.getValue()).getCreatedFromResId()) //
         .isEqualTo(android.R.drawable.picture_frame);
     verify(picasso).enqueueAndSubmit(actionCaptor.capture());
     assertThat(actionCaptor.getValue()).isInstanceOf(ImageViewAction.class);
@@ -375,13 +381,6 @@ public class RequestCreatorTest {
     new RequestCreator(picasso, URI_1, 0).fit().into(target);
     verify(picasso).enqueueAndSubmit(actionCaptor.capture());
     assertThat(actionCaptor.getValue()).isInstanceOf(ImageViewAction.class);
-  }
-
-  @Test
-  public void intoImageViewAndSkipMemoryCacheDoesNotCheckMemoryCache() {
-    ImageView target = mockImageViewTarget();
-    new RequestCreator(picasso, URI_1, 0).skipMemoryCache().into(target);
-    verify(picasso, never()).quickMemoryCacheCheck(URI_KEY_1);
   }
 
   @Test
@@ -581,7 +580,7 @@ public class RequestCreatorTest {
 
   @Test public void appWidgetActionWithCustomTag() {
     new RequestCreator(picasso, URI_1, 0).tag("tag")
-        .into(mockRemoteViews(), 0, new int[]{1, 2, 3});
+        .into(mockRemoteViews(), 0, new int[] { 1, 2, 3 });
     verify(picasso).enqueueAndSubmit(actionCaptor.capture());
     assertThat(actionCaptor.getValue().getTag()).isEqualTo("tag");
   }
@@ -609,7 +608,7 @@ public class RequestCreatorTest {
 
   @Test public void nullAdditionalMemoryPolicy() {
     try {
-      new RequestCreator().memoryPolicy(MemoryPolicy.NO_CACHE, null);
+      new RequestCreator().memoryPolicy(MemoryPolicy.NO_CACHE, (MemoryPolicy[]) null);
       fail("Null additional memory policy should throw exception.");
     } catch (IllegalArgumentException ignored) {
     }
@@ -633,7 +632,7 @@ public class RequestCreatorTest {
 
   @Test public void nullAdditionalNetworkPolicy() {
     try {
-      new RequestCreator().networkPolicy(NetworkPolicy.NO_CACHE, null);
+      new RequestCreator().networkPolicy(NetworkPolicy.NO_CACHE, (NetworkPolicy[]) null);
       fail("Null additional network policy should throw exception.");
     } catch (IllegalArgumentException ignored) {
     }
@@ -774,7 +773,12 @@ public class RequestCreatorTest {
 
   @Test(expected = IllegalArgumentException.class)
   public void nullTransformationsInvalid() {
-    new RequestCreator().transform(null);
+    new RequestCreator().transform((Transformation) null);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void nullTransformationListInvalid() {
+    new RequestCreator().transform((List<Transformation>) null);
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -788,6 +792,28 @@ public class RequestCreatorTest {
         return null;
       }
     });
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void nullKeyInTransformationListInvalid() {
+    List<? extends Transformation> transformations =
+        Collections.singletonList(new Transformation() {
+          @Override public Bitmap transform(Bitmap source) {
+            return source;
+          }
+
+          @Override public String key() {
+            return null;
+          }
+        });
+    new RequestCreator().transform(transformations);
+  }
+
+  @Test public void transformationListImplementationValid() {
+    List<TestTransformation> transformations =
+        Collections.singletonList(new TestTransformation("test"));
+    new RequestCreator().transform(transformations);
+    // TODO verify something!
   }
 
   @Test public void nullTargetsInvalid() {
@@ -813,5 +839,17 @@ public class RequestCreatorTest {
     new RequestCreator(picasso, URI_1, 0).stableKey(null).into(mockImageViewTarget());
     verify(picasso).enqueueAndSubmit(actionCaptor.capture());
     assertThat(actionCaptor.getValue().getKey()).isEqualTo(URI_KEY_1);
+  }
+
+  @Test public void notPurgeable() {
+    new RequestCreator(picasso, URI_1, 0).into(mockImageViewTarget());
+    verify(picasso).enqueueAndSubmit(actionCaptor.capture());
+    assertThat(actionCaptor.getValue().getRequest().purgeable).isFalse();
+  }
+
+  @Test public void purgeable() {
+    new RequestCreator(picasso, URI_1, 0).purgeable().into(mockImageViewTarget());
+    verify(picasso).enqueueAndSubmit(actionCaptor.capture());
+    assertThat(actionCaptor.getValue().getRequest().purgeable).isTrue();
   }
 }

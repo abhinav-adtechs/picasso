@@ -22,6 +22,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.net.NetworkInfo;
 import android.net.Uri;
+import android.os.IBinder;
 import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.RemoteViews;
@@ -66,10 +67,10 @@ class TestUtils {
       createKey(new Request.Builder(MEDIA_STORE_CONTENT_1_URL).build());
   static final Uri CONTENT_1_URL = Uri.parse("content://zip/zap/zoop.jpg");
   static final String CONTENT_KEY_1 = createKey(new Request.Builder(CONTENT_1_URL).build());
-  static final Uri CONTACT_URI_1 = CONTENT_URI.buildUpon().path("1234").build();
+  static final Uri CONTACT_URI_1 = CONTENT_URI.buildUpon().appendPath("1234").build();
   static final String CONTACT_KEY_1 = createKey(new Request.Builder(CONTACT_URI_1).build());
   static final Uri CONTACT_PHOTO_URI_1 =
-      CONTENT_URI.buildUpon().path("1234").path(CONTENT_DIRECTORY).build();
+      CONTENT_URI.buildUpon().appendPath("1234").appendPath(CONTENT_DIRECTORY).build();
   static final String CONTACT_PHOTO_KEY_1 =
       createKey(new Request.Builder(CONTACT_PHOTO_URI_1).build());
   static final int RESOURCE_ID_1 = 1;
@@ -92,7 +93,7 @@ class TestUtils {
   static final String RESOURCE_TYPE_URI_KEY =
       createKey(new Request.Builder(RESOURCE_TYPE_URI).build());
   static final Uri CUSTOM_URI = Uri.parse("foo://bar");
-  static final String CUSTOM_URI_KEY = createKey(new Request.Builder(CUSTOM_URI).build());;
+  static final String CUSTOM_URI_KEY = createKey(new Request.Builder(CUSTOM_URI).build());
 
   static Context mockPackageResourceContext() {
     Context context = mock(Context.class);
@@ -181,6 +182,7 @@ class TestUtils {
     ViewTreeObserver observer = mock(ViewTreeObserver.class);
     when(observer.isAlive()).thenReturn(alive);
     ImageView mock = mock(ImageView.class);
+    when(mock.getWindowToken()).thenReturn(mock(IBinder.class));
     when(mock.getViewTreeObserver()).thenReturn(observer);
     return mock;
   }
